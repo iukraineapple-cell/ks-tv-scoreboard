@@ -9,3 +9,5 @@ code/src/worker/
 d1_dump.sql
 users.json
 public_asset_links.json
+
+.vercel
