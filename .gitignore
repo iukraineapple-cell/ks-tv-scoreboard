@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+.vercel/
+code/wrangler.json
+code/src/worker/
+d1_dump.sql
+users.json
+public_asset_links.json
