@@ -19,7 +19,7 @@ create table if not exists public.matches (
   team1_score integer not null default 0,
   team2_score integer not null default 0,
   timer_duration integer not null default 2700,
-  current_time integer not null default 0,
+  "current_time" integer not null default 0,
   is_timer_running boolean not null default false,
   current_half integer not null default 1,
   design_theme text not null default 'classic',

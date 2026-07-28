@@ -25,3 +25,5 @@ npm run build
 For Vercel, use the repository root as the project root. `vercel.json` contains the build and SPA rewrite configuration. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as Vercel environment variables, then add the deployed Vercel URL to Supabase Auth redirect URLs.
 
 The original Cloudflare/Mocha export files are intentionally not part of the deployable migration. Local database dumps and user exports are ignored by Git to avoid publishing personal data.
+
+The server-side Supabase pooler URL is stored in Vercel as `SUPABASE_DB_URL`. It is never exposed as a `VITE_` variable. The deployment exposes `/api/db-health` for a basic production connection check.
