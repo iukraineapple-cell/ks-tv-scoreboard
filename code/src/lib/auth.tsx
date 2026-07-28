@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-import { requireSupabase } from "./supabase";
+import { requireSupabase, supabase } from "./supabase";
 
 type AuthContextValue = {
   user: User | null;
@@ -17,6 +17,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isPending, setIsPending] = useState(true);
 
   useEffect(() => {
+    if (!supabase) {
+      setIsPending(false);
+      return;
+    }
     const client = requireSupabase();
     client.auth.getSession().then(({ data }) => {
       setSession(data.session);
