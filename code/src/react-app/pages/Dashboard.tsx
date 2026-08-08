@@ -6,7 +6,7 @@ import {
   ExternalLink, Copy, Radio, Activity, CheckCircle, AlertCircle,
   Sparkles, Flame, Play, Clock, Users, ArrowRight
 } from "lucide-react";
-import { getUserMatches, deleteMatch as apiDeleteMatch, MatchData } from "@/lib/supabase-queries";
+import { getUserMatches, deleteMatch as apiDeleteMatch, updateMatchScore, MatchData } from "@/lib/supabase-queries";
 
 export default function Dashboard() {
   const { user: mochaUser, appUser, logout, isPending, refreshAppUser } = useAuth();
@@ -249,43 +249,84 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {matches.map((m) => {
               const scoreboardUrl = `${window.location.origin}/scoreboard?match=${m.id}`;
+              const lineupsUrl = `${window.location.origin}/lineups?match=${m.id}`;
+              const eventsUrl = `${window.location.origin}/events?match=${m.id}`;
+              const studioUrl = `${window.location.origin}/studio/${m.id}`;
+
+              const handleQuickScore = async (t1Delta: number, t2Delta: number) => {
+                const newT1 = Math.max(0, m.team1_score + t1Delta);
+                const newT2 = Math.max(0, m.team2_score + t2Delta);
+                const success = await updateMatchScore(m.id, newT1, newT2);
+                if (success) {
+                  setMatches(prev => prev.map(item => item.id === m.id ? { ...item, team1_score: newT1, team2_score: newT2 } : item));
+                  showFeedback("success", `⚽ Рахунок: ${m.team1_name} ${newT1}:${newT2} ${m.team2_name}`);
+                }
+              };
+
               return (
                 <div 
                   key={m.id} 
-                  className="glass-card rounded-3xl p-6 border border-white/[0.08] flex flex-col justify-between space-y-6 hover:border-blue-500/40 transition-all group"
+                  className="glass-card rounded-3xl p-6 border border-white/[0.08] flex flex-col justify-between space-y-6 hover:border-blue-500/40 transition-all group shadow-xl"
                 >
                   <div>
                     {/* Top match header */}
                     <div className="flex items-center justify-between mb-4">
-                      <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                        m.is_visible 
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
-                          : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${m.is_visible ? 'bg-rose-500 animate-pulse' : 'bg-slate-500'}`}></span>
-                        <span>{m.is_visible ? 'В ЕФІРІ' : 'ПРИХОВАНО'}</span>
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          m.is_visible 
+                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' 
+                            : 'bg-slate-800 text-slate-400'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${m.is_visible ? 'bg-rose-500 animate-pulse' : 'bg-slate-500'}`}></span>
+                          <span>{m.is_visible ? 'В ЕФІРІ' : 'ПРИХОВАНО'}</span>
+                        </span>
+
+                        {m.is_broadcasting && (
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white animate-pulse">
+                            <Radio className="h-3 w-3" />
+                            <span>YOUTUBE LIVE</span>
+                          </span>
+                        )}
+                      </div>
 
                       <span className="text-xs font-mono text-slate-400">
                         {m.current_half === 1 ? '1-й тайм' : '2-й тайм'}
                       </span>
                     </div>
 
-                    {/* Team 1 vs Team 2 Score Card */}
-                    <div className="bg-[#090C16] border border-white/[0.06] rounded-2xl p-4 flex items-center justify-between mb-4">
+                    {/* Team 1 vs Team 2 Score Card with Tactile Buttons */}
+                    <div className="bg-[#090C16] border border-white/[0.06] rounded-2xl p-4 flex items-center justify-between mb-4 shadow-inner">
                       {/* Team 1 */}
                       <div className="flex items-center space-x-2 text-left flex-1 min-w-0">
                         <div 
-                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 text-white"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 text-white shadow-md"
                           style={{ backgroundColor: m.team1_color || '#2563eb' }}
                         >
                           {m.team1_name ? m.team1_name.slice(0, 1) : '1'}
                         </div>
-                        <span className="font-bold text-sm text-white truncate">{m.team1_name}</span>
+                        <div className="min-w-0">
+                          <span className="font-bold text-sm text-white truncate block">{m.team1_name}</span>
+                          <div className="flex items-center space-x-1 mt-1">
+                            <button
+                              onClick={() => handleQuickScore(1, 0)}
+                              className="px-1.5 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white text-[10px] font-bold transition-all"
+                              title="+1 гол Команді 1"
+                            >
+                              +1
+                            </button>
+                            <button
+                              onClick={() => handleQuickScore(-1, 0)}
+                              className="px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white text-[10px] font-bold transition-all"
+                              title="-1 гол"
+                            >
+                              -1
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Score */}
-                      <div className="px-3 py-1 rounded-xl bg-black/60 font-mono font-black text-lg text-white mx-2 shrink-0">
+                      <div className="px-3 py-1.5 rounded-xl bg-black/80 font-mono font-black text-xl text-white mx-2 shrink-0 border border-white/[0.08] shadow-lg">
                         <span className="text-blue-400">{m.team1_score}</span>
                         <span className="text-slate-600 mx-1">:</span>
                         <span className="text-amber-400">{m.team2_score}</span>
@@ -293,57 +334,105 @@ export default function Dashboard() {
 
                       {/* Team 2 */}
                       <div className="flex items-center space-x-2 text-right justify-end flex-1 min-w-0">
-                        <span className="font-bold text-sm text-white truncate">{m.team2_name}</span>
+                        <div className="min-w-0">
+                          <span className="font-bold text-sm text-white truncate block">{m.team2_name}</span>
+                          <div className="flex items-center justify-end space-x-1 mt-1">
+                            <button
+                              onClick={() => handleQuickScore(0, -1)}
+                              className="px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white text-[10px] font-bold transition-all"
+                              title="-1 гол"
+                            >
+                              -1
+                            </button>
+                            <button
+                              onClick={() => handleQuickScore(0, 1)}
+                              className="px-1.5 py-0.5 rounded bg-amber-600/30 hover:bg-amber-600 text-amber-300 hover:text-white text-[10px] font-bold transition-all"
+                              title="+1 гол Команді 2"
+                            >
+                              +1
+                            </button>
+                          </div>
+                        </div>
                         <div 
-                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 text-white"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 text-white shadow-md"
                           style={{ backgroundColor: m.team2_color || '#d97706' }}
                         >
                           {m.team2_name ? m.team2_name.slice(0, 1) : '2'}
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions Bar */}
-                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
-                    <Link
-                      to={`/match/${m.id}`}
-                      className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
-                    >
-                      <Play className="h-4 w-4 fill-current" />
-                      <span>Керувати матчем (Cockpit)</span>
-                    </Link>
-
-                    <Link
-                      to={`/studio/${m.id}`}
-                      className="w-full py-3 rounded-xl text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg transition-all active:scale-95"
-                      style={{
-                        background: m.is_broadcasting
-                          ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-                          : 'linear-gradient(135deg, #10b981, #059669)',
-                        boxShadow: m.is_broadcasting
-                          ? '0 4px 20px rgba(239,68,68,0.3)'
-                          : '0 4px 20px rgba(16,185,129,0.3)',
-                      }}
-                    >
-                      <Radio className="h-4 w-4" />
-                      <span>{m.is_broadcasting ? '🔴 В ЕТЕРІ — Студія Live' : '📡 Студія Live (YouTube)'}</span>
-                    </Link>
-
-                    <div className="grid grid-cols-2 gap-2">
+                    {/* Quick OBS Sources Toolbar */}
+                    <div className="grid grid-cols-3 gap-1.5 mb-2">
                       <button
                         onClick={() => copyToClipboard(scoreboardUrl, "табло OBS")}
-                        className="py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center space-x-1.5 border border-white/[0.06] transition-colors"
+                        className="py-1.5 px-2 rounded-lg bg-white/[0.03] hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 text-[10px] font-semibold border border-white/[0.05] transition-all flex items-center justify-center space-x-1"
+                        title="Скопіювати посилання на табло"
                       >
-                        <Copy className="h-3.5 w-3.5 text-blue-400" />
-                        <span>Скопіювати OBS</span>
+                        <Copy className="h-3 w-3 text-blue-400" />
+                        <span>Табло</span>
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(lineupsUrl, "склади OBS")}
+                        className="py-1.5 px-2 rounded-lg bg-white/[0.03] hover:bg-purple-600/20 text-slate-300 hover:text-purple-300 text-[10px] font-semibold border border-white/[0.05] transition-all flex items-center justify-center space-x-1"
+                        title="Скопіювати посилання на склади"
+                      >
+                        <Copy className="h-3 w-3 text-purple-400" />
+                        <span>Склади</span>
+                      </button>
+                      <button
+                        onClick={() => copyToClipboard(eventsUrl, "події OBS")}
+                        className="py-1.5 px-2 rounded-lg bg-white/[0.03] hover:bg-amber-600/20 text-slate-300 hover:text-amber-300 text-[10px] font-semibold border border-white/[0.05] transition-all flex items-center justify-center space-x-1"
+                        title="Скопіювати посилання на події"
+                      >
+                        <Copy className="h-3 w-3 text-amber-400" />
+                        <span>Події</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Primary Action Buttons */}
+                  <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        to={`/match/${m.id}`}
+                        className="py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                      >
+                        <Play className="h-3.5 w-3.5 fill-current" />
+                        <span>Пульт (Cockpit)</span>
+                      </Link>
+
+                      <Link
+                        to={`/studio/${m.id}`}
+                        className="py-2.5 rounded-xl text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg transition-all active:scale-95"
+                        style={{
+                          background: m.is_broadcasting
+                            ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                            : 'linear-gradient(135deg, #10b981, #059669)',
+                          boxShadow: m.is_broadcasting
+                            ? '0 4px 15px rgba(239,68,68,0.3)'
+                            : '0 4px 15px rgba(16,185,129,0.3)',
+                        }}
+                      >
+                        <Radio className={`h-3.5 w-3.5 ${m.is_broadcasting ? 'animate-pulse' : ''}`} />
+                        <span>{m.is_broadcasting ? 'В ЕТЕРІ' : 'Студія Live'}</span>
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        onClick={() => copyToClipboard(studioUrl, "посилання на студію")}
+                        className="text-[11px] text-slate-400 hover:text-emerald-400 transition-colors flex items-center space-x-1"
+                      >
+                        <Copy className="h-3 w-3" />
+                        <span>Копіювати посилання для телефона</span>
                       </button>
 
                       <button
                         onClick={() => handleDeleteMatch(m.id)}
-                        className="py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs font-semibold flex items-center justify-center space-x-1.5 border border-white/[0.06] transition-colors"
+                        className="text-[11px] text-slate-500 hover:text-rose-400 transition-colors flex items-center space-x-1"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3 w-3" />
                         <span>Видалити</span>
                       </button>
                     </div>

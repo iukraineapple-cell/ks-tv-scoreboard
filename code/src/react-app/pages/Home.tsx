@@ -229,41 +229,94 @@ export default function Home() {
       {/* Bento Grid Features Section */}
       <section className="container mx-auto px-6 py-20 max-w-6xl">
         <div className="text-center mb-16">
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold mb-4">
+            <Radio className="h-3.5 w-3.5" />
+            <span>Повний набір інструментів для трансляцій</span>
+          </div>
           <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-4">
-            Створено для професійних коментаторів та операторів
+            Все для трансляції на YouTube та в OBS в одному місці
           </h2>
           <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
-            Все необхідне для створення якісної картинки прямого ефіру за кілька секунд.
+            Стрімте з камери смартфона на YouTube з накладеною графікою або транслюйте через OBS Studio та vMix.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Feature 1: Mobile YouTube Live Studio */}
+          <div className="glass-card rounded-3xl p-8 border border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-transparent flex flex-col justify-between space-y-4 shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Smartphone className="h-6 w-6" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold block mb-1">Новинка</span>
+              <h3 className="text-lg font-bold text-white mb-2">Стрім на YouTube з телефона</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                Запустіть камеру смартфона прямо в браузері — табло, таймер, голи та склади накладаються поверх відео в реальному часі.
+              </p>
+            </div>
+          </div>
+
+          {/* Feature 2: Instant OBS & vMix */}
           <div className="glass-card rounded-3xl p-8 border border-white/[0.08] flex flex-col justify-between space-y-4">
-            <Radio className="h-10 w-10 text-rose-400" />
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/20 flex items-center justify-center text-rose-400">
+              <Radio className="h-6 w-6" />
+            </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-2">Миттєве підключення до OBS</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Додайте Browser Source у OBS Studio або vMix. Графіка оновлюється з нульовою затримкою через WebSocket.
+                Додайте Browser Source у OBS Studio або vMix. Графіка оновлюється з нульовою затримкою через Supabase WebSocket.
               </p>
             </div>
           </div>
 
+          {/* Feature 3: Match Cockpit */}
           <div className="glass-card rounded-3xl p-8 border border-white/[0.08] flex flex-col justify-between space-y-4">
-            <Zap className="h-10 w-10 text-amber-400" />
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400">
+              <Zap className="h-6 w-6" />
+            </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-2">Гарячі клавіші та пульт</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Керуйте грою з клавіатури: Space для таймера, цифри для голів, миттєві картки та сповіщення.
+                Керуйте грою з клавіатури: Space для таймера, 1 і 2 для голів, швидкі картки та сповіщення нижнього титру.
               </p>
             </div>
           </div>
 
+          {/* Feature 4: Excel Lineups */}
           <div className="glass-card rounded-3xl p-8 border border-white/[0.08] flex flex-col justify-between space-y-4">
-            <Users className="h-10 w-10 text-blue-400" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+              <Users className="h-6 w-6" />
+            </div>
             <div>
               <h3 className="text-lg font-bold text-white mb-2">Імпорт складів з Excel</h3>
               <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-                Завантажуйте готові заявки команд у форматі Excel в 1 клік без ручного введення кожного гравця.
+                Завантажуйте готові списки команд у форматі Excel в 1 клік — стартовий склад та запасні готові до етеру.
+              </p>
+            </div>
+          </div>
+
+          {/* Feature 5: 3 Premium Themes */}
+          <div className="glass-card rounded-3xl p-8 border border-white/[0.08] flex flex-col justify-between space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-2">3 преміум теми графіки</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                Champions Glass, Premier Pro та Cyber Neon з налаштуванням позиціонування та фірмових кольорів команд.
+              </p>
+            </div>
+          </div>
+
+          {/* Feature 6: Local HD Recording */}
+          <div className="glass-card rounded-3xl p-8 border border-white/[0.08] flex flex-col justify-between space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+              <Tv className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white mb-2">Локальний HD запис</h3>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+                Зберігайте повний запис матчу з накладеною графікою прямо на телефон або ПК у високій якості.
               </p>
             </div>
           </div>

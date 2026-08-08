@@ -29,6 +29,7 @@ import {
   addEvent as apiAddEvent,
   deleteEvent as apiDeleteEvent,
   updateEventBroadcast,
+  updateBroadcastStatus,
   MatchData,
   MatchPlayerData,
   MatchEventData
@@ -44,8 +45,12 @@ export default function MatchControl() {
   const [events, setEvents] = useState<MatchEventData[]>([]);
   const [displayTime, setDisplayTime] = useState(0);
 
-  const [activeTab, setActiveTab] = useState<'cockpit' | 'players' | 'events' | 'graphics' | 'settings'>('cockpit');
+  const [activeTab, setActiveTab] = useState<'cockpit' | 'players' | 'events' | 'graphics' | 'settings' | 'streaming'>('cockpit');
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+  const [youtubeKey, setYoutubeKey] = useState('');
+  const [youtubeUrl, setYoutubeUrl] = useState('rtmp://a.rtmp.youtube.com/live2');
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [showKeySecret, setShowKeySecret] = useState(false);
   const [quickActionModal, setQuickActionModal] = useState<{
     type: 'goal' | 'yellow_card' | 'red_card' | 'substitution';
     team: 1 | 2;
@@ -97,6 +102,9 @@ export default function MatchControl() {
       if (data) {
         setMatch(data);
         setDisplayTime(getDisplayTime(data));
+        if (data.youtube_stream_key) setYoutubeKey(data.youtube_stream_key);
+        if (data.youtube_rtmp_url) setYoutubeUrl(data.youtube_rtmp_url);
+        if (data.is_broadcasting !== undefined) setIsBroadcasting(data.is_broadcasting);
       } else {
         navigate("/dashboard");
       }
@@ -628,6 +636,25 @@ export default function MatchControl() {
               <span>Клавіші</span>
             </button>
 
+            {/* Quick Live Studio Launch Button */}
+            <Link
+              to={`/studio/${match.id}`}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-white text-xs sm:text-sm font-bold shadow-lg transition-all transform active:scale-95"
+              style={{
+                background: match.is_broadcasting
+                  ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                  : 'linear-gradient(135deg, #10b981, #059669)',
+                boxShadow: match.is_broadcasting
+                  ? '0 4px 20px rgba(239,68,68,0.3)'
+                  : '0 4px 20px rgba(16,185,129,0.3)',
+              }}
+              title="Відкрити мобільну студію трансляції з накладанням графіки"
+            >
+              <Radio className={`h-4 w-4 ${match.is_broadcasting ? 'animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">Студія Live</span>
+              <span>{match.is_broadcasting ? '🔴' : '🎥'}</span>
+            </Link>
+
             {/* Quick OBS Copy Pill */}
             <div className="relative group">
               <button
@@ -976,6 +1003,7 @@ export default function MatchControl() {
         <div className="flex items-center space-x-2 border-b border-white/[0.08] mb-6 overflow-x-auto pb-2 scrollbar-none">
           {[
             { id: 'cockpit', label: '⚡ Пульт та прев\'ю', icon: Zap },
+            { id: 'streaming', label: '📡 Студія & YouTube Live', icon: Radio },
             { id: 'players', label: '👥 Склади команд', icon: Users, count: players.length },
             { id: 'events', label: '📝 Хроніка подій', icon: Activity, count: events.length },
             { id: 'graphics', label: '🎨 Стиль & Графіка', icon: Palette },
@@ -1414,6 +1442,221 @@ export default function MatchControl() {
                 className="glass-input rounded-xl px-4 py-2.5 text-sm w-full outline-none"
               />
               <p className="text-xs text-slate-500 mt-1">45 хв для футболу 11х11, 20 хв для футзалу / міні-футболу.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ===================== TAB 6: STREAMING & YOUTUBE LIVE ===================== */}
+        {activeTab === 'streaming' && (
+          <div className="space-y-6 max-w-4xl">
+            {/* Live Studio Hero Card */}
+            <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-blue-500/5 to-transparent shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Radio className="h-7 w-7 animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Мобільна Студія Прямого Етеру</h2>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      match.is_broadcasting ? 'bg-red-500 text-white animate-pulse' : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {match.is_broadcasting ? '🔴 В ЕТЕРІ' : 'ГОТОВО'}
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-300 mt-1">
+                    Транслюйте матч з камери телефона прямо на YouTube з накладанням табло, голів, карток та складів наживо
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to={`/studio/${match.id}`}
+                className="w-full md:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-300 hover:to-teal-400 text-slate-950 font-black text-sm transition-all shadow-xl shadow-emerald-500/25 text-center whitespace-nowrap active:scale-95 flex items-center justify-center space-x-2"
+              >
+                <span>Відкрити Студію Live</span>
+                <ExternalLink className="h-4 w-4" />
+              </Link>
+            </div>
+
+            {/* YouTube RTMP Configuration Form */}
+            <div className="glass-panel p-6 rounded-2xl border border-white/[0.08] space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+                <div className="flex items-center space-x-2">
+                  <Flame className="h-5 w-5 text-rose-500" />
+                  <h3 className="font-bold text-base text-white">Параметри YouTube Live (RTMP)</h3>
+                </div>
+                <button
+                  onClick={async () => {
+                    const nextState = !isBroadcasting;
+                    setIsBroadcasting(nextState);
+                    await updateBroadcastStatus(match.id, {
+                      is_broadcasting: nextState,
+                      youtube_stream_key: youtubeKey,
+                      youtube_rtmp_url: youtubeUrl,
+                      broadcast_started_at: nextState ? new Date().toISOString() : null,
+                    });
+                    showFeedback('success', nextState ? '🔴 Статус змінено на В ЕТЕРІ' : '⚪ Трансляцію зупинено');
+                  }}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                    isBroadcasting
+                      ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                  }`}
+                >
+                  {isBroadcasting ? '🔴 ЗАКІНЧИТИ ЕТЕР' : '🟢 АКТИВУВАТИ ЕТЕР'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    URL-адреса трансляції (YouTube RTMP)
+                  </label>
+                  <input
+                    type="text"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="rtmp://a.rtmp.youtube.com/live2"
+                    className="glass-input rounded-xl px-4 py-2.5 text-xs sm:text-sm w-full outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">За замовчуванням: rtmp://a.rtmp.youtube.com/live2</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                    <span>Ключ трансляції YouTube</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowKeySecret(!showKeySecret)}
+                      className="text-[10px] text-blue-400 hover:underline"
+                    >
+                      {showKeySecret ? 'Приховати' : 'Показати'}
+                    </button>
+                  </label>
+                  <input
+                    type={showKeySecret ? 'text' : 'password'}
+                    value={youtubeKey}
+                    onChange={(e) => setYoutubeKey(e.target.value)}
+                    placeholder="xxxx-xxxx-xxxx-xxxx-xxxx"
+                    className="glass-input rounded-xl px-4 py-2.5 text-xs sm:text-sm w-full outline-none font-mono"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">Знайдіть у YouTube Studio → Створити трансляцію → Ключ потоку</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/[0.06]">
+                <div className="text-xs text-slate-400">
+                  <span>Relay-сервер: </span>
+                  <span className="font-mono text-emerald-400 font-bold">http://localhost:3001</span>
+                </div>
+
+                <button
+                  onClick={async () => {
+                    await updateBroadcastStatus(match.id, {
+                      youtube_stream_key: youtubeKey,
+                      youtube_rtmp_url: youtubeUrl,
+                    });
+                    localStorage.setItem(`rtmp_settings_${match.id}`, JSON.stringify({
+                      rtmpUrl: youtubeUrl,
+                      streamKey: youtubeKey,
+                      relayUrl: 'ws://localhost:3001'
+                    }));
+                    showFeedback('success', '✨ Параметри YouTube RTMP збережено!');
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/20 transition-all active:scale-95"
+                >
+                  Зберегти налаштування
+                </button>
+              </div>
+            </div>
+
+            {/* OBS & Graphics Overlays 1-Click Hub */}
+            <div className="glass-panel p-6 rounded-2xl border border-white/[0.08] space-y-4">
+              <h3 className="font-bold text-base text-white flex items-center space-x-2">
+                <Radio className="h-5 w-5 text-blue-400" />
+                <span>OBS Browser Source посилання для трансляції</span>
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Scoreboard Card */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-white">📊 Табло з рахунком</span>
+                    <span className="text-[10px] text-blue-400 font-mono">1920x1080</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => copyToClipboard(scoreboardUrl, "табло OBS")}
+                      className="flex-1 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center justify-center space-x-1 transition-all"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Копіювати</span>
+                    </button>
+                    <a
+                      href={scoreboardUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 transition-all"
+                      title="Відкрити"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Lineups Card */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-white">📋 Склади команд</span>
+                    <span className="text-[10px] text-purple-400 font-mono">1920x1080</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => copyToClipboard(lineupsUrl, "склади OBS")}
+                      className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center justify-center space-x-1 transition-all"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Копіювати</span>
+                    </button>
+                    <a
+                      href={lineupsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 transition-all"
+                      title="Відкрити"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+
+                {/* Events Card */}
+                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-white">⚽ Тікер подій</span>
+                    <span className="text-[10px] text-amber-400 font-mono">1920x1080</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => copyToClipboard(eventsUrl, "події OBS")}
+                      className="flex-1 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold flex items-center justify-center space-x-1 transition-all"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      <span>Копіювати</span>
+                    </button>
+                    <a
+                      href={eventsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="p-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 transition-all"
+                      title="Відкрити"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
