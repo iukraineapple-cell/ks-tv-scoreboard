@@ -93,12 +93,27 @@ export async function getCurrentUserProfile(): Promise<UserProfile | null> {
     .from("users")
     .select("*")
     .eq("auth_user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== "PGRST116") {
-    console.error("Error fetching user profile:", error);
+  if (data) return data;
+
+  const displayName = user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  const { data: inserted, error: insertError } = await supabase
+    .from("users")
+    .upsert({
+      auth_user_id: user.id,
+      email: user.email || "",
+      name: displayName,
+      is_admin: false,
+      is_payment_confirmed: false,
+    }, { onConflict: "auth_user_id" })
+    .select()
+    .maybeSingle();
+
+  if (insertError) {
+    console.error("Error creating user profile:", insertError);
   }
-  return data || null;
+  return inserted || null;
 }
 
 // Match Queries
