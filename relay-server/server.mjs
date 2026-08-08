@@ -9,13 +9,13 @@ const PORT = process.env.PORT || 3001;
 const MAX_CONCURRENT_STREAMS = 5;
 const API_KEY = process.env.API_KEY || null;
 
-// Intelligent search for FFmpeg path
+// Search for FFmpeg path
 function findFFmpeg() {
   if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) {
     return process.env.FFMPEG_PATH;
   }
 
-  // Check PATH first
+  // Check PATH
   try {
     const whereOut = execSync('where.exe ffmpeg', { encoding: 'utf8', timeout: 2000 }).trim().split(/\r?\n/)[0];
     if (whereOut && fs.existsSync(whereOut)) return whereOut;
@@ -33,7 +33,6 @@ function findFFmpeg() {
           const candidateBin = path.join(wingetPkgDir, d, 'ffmpeg-9.0-full_build', 'bin', 'ffmpeg.exe');
           if (fs.existsSync(candidateBin)) return candidateBin;
 
-          // Recursive check 2 levels
           const subdirs = fs.readdirSync(path.join(wingetPkgDir, d));
           for (const sub of subdirs) {
             const nestedBin = path.join(wingetPkgDir, d, sub, 'bin', 'ffmpeg.exe');
@@ -46,7 +45,6 @@ function findFFmpeg() {
     } catch (e) {}
   }
 
-  // Check standard links
   const wingetLinks = path.join(localAppData, 'Microsoft', 'WinGet', 'Links', 'ffmpeg.exe');
   if (fs.existsSync(wingetLinks)) return wingetLinks;
 
@@ -148,7 +146,9 @@ wss.on('connection', (ws, req) => {
     if (ffmpegProcess) {
       console.log(`Stopping FFmpeg process for ${ip}...`);
       try {
-        ffmpegProcess.stdin.end();
+        if (ffmpegProcess.stdin && !ffmpegProcess.stdin.destroyed) {
+          ffmpegProcess.stdin.end();
+        }
         ffmpegProcess.kill('SIGINT');
       } catch (e) {}
       ffmpegProcess = null;
@@ -162,8 +162,12 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (message, isBinary) => {
     if (isBinary) {
       if (ffmpegProcess && isStreaming) {
-        if (ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
-          ffmpegProcess.stdin.write(message);
+        if (ffmpegProcess.stdin && ffmpegProcess.stdin.writable && !ffmpegProcess.stdin.destroyed) {
+          try {
+            ffmpegProcess.stdin.write(message);
+          } catch (writeErr) {
+            // ignore write error during stream teardown
+          }
         }
       }
       return;
@@ -213,6 +217,7 @@ wss.on('connection', (ws, req) => {
           '-b:a', '128k',
           '-ar', '44100',
           '-ac', '2',
+          '-af', 'aresample=async=1000:min_hard_comp=0.100000:first_pts=0',
           '-flvflags', 'no_duration_filesize',
           '-f', 'flv',
           fullUrl
@@ -220,6 +225,13 @@ wss.on('connection', (ws, req) => {
 
         ffmpegProcess = spawn(FFMPEG_PATH, ffmpegArgs);
         
+        // Prevent unhandled error on stdin pipe
+        if (ffmpegProcess.stdin) {
+          ffmpegProcess.stdin.on('error', (err) => {
+            // Handle EPIPE or EOF gracefully
+          });
+        }
+
         activeStreams++;
         isStreaming = true;
         sendStatus('streaming', 'FFmpeg started, transmitting to YouTube Live');
@@ -238,8 +250,8 @@ wss.on('connection', (ws, req) => {
 
         ffmpegProcess.stderr.on('data', (data) => {
           const str = data.toString();
-          if (str.toLowerCase().includes('error') || str.toLowerCase().includes('failed')) {
-            console.log(`[FFmpeg Error]: ${str.trim()}`);
+          if (str.toLowerCase().includes('error') || str.toLowerCase().includes('failed') || str.toLowerCase().includes('aborted')) {
+            console.log(`[FFmpeg Info]: ${str.trim()}`);
           }
         });
 

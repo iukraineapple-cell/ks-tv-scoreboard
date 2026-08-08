@@ -206,19 +206,16 @@ export class CompositingEngine {
 
     if (this.match.is_timer_running && this.match.timer_server_time) {
       const now = Date.now() / 1000;
-      elapsed += (now - this.match.timer_server_time) * 1000;
+      elapsed += Math.floor(now - this.match.timer_server_time);
     }
 
-    let displayTime = elapsed;
     if (this.match.current_half === 2) {
-      displayTime += (this.match.half_time_offset || 45 * 60 * 1000);
+      elapsed += (this.match.half_time_offset || this.match.timer_duration);
     }
 
-    const totalSeconds = Math.floor(displayTime / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const mins = Math.floor(Math.max(0, elapsed) / 60);
+    const secs = Math.floor(Math.max(0, elapsed) % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
   private drawScoreboard() {
