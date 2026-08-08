@@ -1,15 +1,60 @@
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { parse } from 'url';
+import fs from 'fs';
+import path from 'path';
 
 const PORT = process.env.PORT || 3001;
 const MAX_CONCURRENT_STREAMS = 5;
 const API_KEY = process.env.API_KEY || null;
 
-let activeStreams = 0;
+// Intelligent search for FFmpeg path
+function findFFmpeg() {
+  if (process.env.FFMPEG_PATH && fs.existsSync(process.env.FFMPEG_PATH)) {
+    return process.env.FFMPEG_PATH;
+  }
 
-// Print ASCII banner
+  // Check PATH first
+  try {
+    const whereOut = execSync('where.exe ffmpeg', { encoding: 'utf8', timeout: 2000 }).trim().split(/\r?\n/)[0];
+    if (whereOut && fs.existsSync(whereOut)) return whereOut;
+  } catch (e) {}
+
+  // Check WinGet Packages
+  const localAppData = process.env.LOCALAPPDATA || path.join(process.env.USERPROFILE || 'C:\\Users\\KSTV', 'AppData', 'Local');
+  const wingetPkgDir = path.join(localAppData, 'Microsoft', 'WinGet', 'Packages');
+  
+  if (fs.existsSync(wingetPkgDir)) {
+    try {
+      const dirs = fs.readdirSync(wingetPkgDir);
+      for (const d of dirs) {
+        if (d.toLowerCase().includes('ffmpeg')) {
+          const candidateBin = path.join(wingetPkgDir, d, 'ffmpeg-9.0-full_build', 'bin', 'ffmpeg.exe');
+          if (fs.existsSync(candidateBin)) return candidateBin;
+
+          // Recursive check 2 levels
+          const subdirs = fs.readdirSync(path.join(wingetPkgDir, d));
+          for (const sub of subdirs) {
+            const nestedBin = path.join(wingetPkgDir, d, sub, 'bin', 'ffmpeg.exe');
+            if (fs.existsSync(nestedBin)) return nestedBin;
+            const directBin = path.join(wingetPkgDir, d, sub, 'ffmpeg.exe');
+            if (fs.existsSync(directBin)) return directBin;
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  // Check standard links
+  const wingetLinks = path.join(localAppData, 'Microsoft', 'WinGet', 'Links', 'ffmpeg.exe');
+  if (fs.existsSync(wingetLinks)) return wingetLinks;
+
+  return 'ffmpeg';
+}
+
+const FFMPEG_PATH = findFFmpeg();
+
 console.log(`
 ██╗  ██╗███████╗    ████████╗██╗   ██╗
 ██║ ██╔╝██╔════╝    ╚══██╔══╝██║   ██║
@@ -26,22 +71,25 @@ console.log(`
     ╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═╝   ╚═╝   
 `);
 console.log(`Starting KS TV Relay Server on port ${PORT}...`);
+console.log(`Resolved FFmpeg binary: ${FFMPEG_PATH}`);
 
-// Check if FFmpeg is installed
-const ffmpegCheck = spawn('ffmpeg', ['-version']);
-ffmpegCheck.on('error', (err) => {
-  console.error('❌ FFmpeg is not installed or not in PATH.');
-  console.error('Please install FFmpeg and ensure it is available in your system PATH.');
-  process.exit(1);
-});
-ffmpegCheck.stdout.once('data', (data) => {
-  const versionLine = data.toString().split('\n')[0];
-  console.log(`✅ FFmpeg found: ${versionLine}`);
-  console.log(`✅ Connect from browser to ws://localhost:${PORT}`);
-});
+// Verify FFmpeg
+try {
+  const ffmpegCheck = spawn(FFMPEG_PATH, ['-version']);
+  ffmpegCheck.stdout.once('data', (data) => {
+    const versionLine = data.toString().split('\n')[0];
+    console.log(`✅ FFmpeg active: ${versionLine}`);
+    console.log(`✅ Ready! Connect from mobile studio at ws://localhost:${PORT}`);
+    console.log('');
+  });
+  ffmpegCheck.on('error', (err) => {
+    console.error(`⚠️ Notice: FFmpeg test returned: ${err.message}`);
+  });
+} catch (e) {
+  console.error('Error testing FFmpeg:', e.message);
+}
 
 const server = createServer((req, res) => {
-  // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');
@@ -56,6 +104,7 @@ const server = createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       status: 'ok',
+      service: 'ks-tv-relay',
       activeStreams,
       maxStreams: MAX_CONCURRENT_STREAMS
     }));
@@ -65,6 +114,7 @@ const server = createServer((req, res) => {
   }
 });
 
+let activeStreams = 0;
 const wss = new WebSocketServer({ noServer: true });
 
 server.on('upgrade', (request, socket, head) => {
@@ -83,7 +133,7 @@ server.on('upgrade', (request, socket, head) => {
 
 wss.on('connection', (ws, req) => {
   const ip = req.socket.remoteAddress;
-  console.log(`📡 New WebSocket connection from ${ip}`);
+  console.log(`📡 New studio WebSocket connection from ${ip}`);
 
   let ffmpegProcess = null;
   let isStreaming = false;
@@ -100,13 +150,11 @@ wss.on('connection', (ws, req) => {
       try {
         ffmpegProcess.stdin.end();
         ffmpegProcess.kill('SIGINT');
-      } catch (e) {
-        console.error('Error killing FFmpeg process:', e);
-      }
+      } catch (e) {}
       ffmpegProcess = null;
     }
     if (isStreaming) {
-      activeStreams--;
+      activeStreams = Math.max(0, activeStreams - 1);
       isStreaming = false;
     }
   };
@@ -114,8 +162,7 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (message, isBinary) => {
     if (isBinary) {
       if (ffmpegProcess && isStreaming) {
-        // Write binary chunk to FFmpeg stdin
-        if (ffmpegProcess.stdin.writable) {
+        if (ffmpegProcess.stdin && ffmpegProcess.stdin.writable) {
           ffmpegProcess.stdin.write(message);
         }
       }
@@ -143,18 +190,19 @@ wss.on('connection', (ws, req) => {
           return;
         }
 
-        const fullUrl = \`\${rtmpUrl.replace(/\\/$/, '')}/\${streamKey}\`;
-        const maskedUrl = \`\${rtmpUrl}/****\`;
+        const fullUrl = `${rtmpUrl.replace(/\/$/, '')}/${streamKey}`;
+        const maskedKey = streamKey.slice(0, 4) + '****';
 
-        console.log(`🎬 Starting stream to ${maskedUrl} (Current active: ${activeStreams + 1})`);
+        console.log(`🎬 [STUDIO LIVE] Streaming to ${rtmpUrl}/${maskedKey} (Active: ${activeStreams + 1})`);
 
         const ffmpegArgs = [
+          '-re',
           '-i', 'pipe:0',
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
           '-tune', 'zerolatency',
-          '-maxrate', '2500k',
-          '-bufsize', '5000k',
+          '-maxrate', '3000k',
+          '-bufsize', '6000k',
           '-pix_fmt', 'yuv420p',
           '-g', '60',
           '-c:a', 'aac',
@@ -164,55 +212,54 @@ wss.on('connection', (ws, req) => {
           fullUrl
         ];
 
-        ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+        ffmpegProcess = spawn(FFMPEG_PATH, ffmpegArgs);
         
         activeStreams++;
         isStreaming = true;
-        sendStatus('streaming', 'FFmpeg process started');
+        sendStatus('streaming', 'FFmpeg started, transmitting to YouTube Live');
 
         ffmpegProcess.on('error', (err) => {
-          console.error(\`FFmpeg error for \${ip}:\`, err);
-          sendStatus('error', \`FFmpeg error: \${err.message}\`);
+          console.error(`FFmpeg error for ${ip}:`, err.message);
+          sendStatus('error', `FFmpeg error: ${err.message}`);
           cleanup();
         });
 
         ffmpegProcess.on('close', (code, signal) => {
-          console.log(\`FFmpeg process closed with code \${code} and signal \${signal}\`);
-          sendStatus('stopped', 'FFmpeg process closed');
+          console.log(`FFmpeg closed: code=${code} signal=${signal}`);
+          sendStatus('stopped', 'FFmpeg stream finished');
           cleanup();
         });
 
         ffmpegProcess.stderr.on('data', (data) => {
           const str = data.toString();
-          // Log errors or specific keywords, ignore normal info to avoid noise
-          if (str.toLowerCase().includes('error') || str.toLowerCase().includes('failed') || str.toLowerCase().includes('warn')) {
-             console.log(\`[FFmpeg \${ip}] \${str.trim()}\`);
+          if (str.toLowerCase().includes('error') || str.toLowerCase().includes('failed')) {
+            console.log(`[FFmpeg Error]: ${str.trim()}`);
           }
         });
 
       } else if (data.type === 'stop') {
         console.log(`⏹️ Client requested stop for ${ip}`);
         cleanup();
-        sendStatus('stopped', 'Stream stopped by client');
+        sendStatus('stopped', 'Stream stopped by studio');
       }
 
     } catch (e) {
-      console.error('Error parsing JSON message:', e);
+      console.error('Error parsing JSON message:', e.message);
       sendStatus('error', 'Invalid message format');
     }
   });
 
   ws.on('close', () => {
-    console.log(`🔌 WebSocket disconnected from ${ip}`);
+    console.log(`🔌 Studio WebSocket disconnected from ${ip}`);
     cleanup();
   });
 
   ws.on('error', (err) => {
-    console.error(`WebSocket error from ${ip}:`, err);
+    console.error(`Studio WebSocket error from ${ip}:`, err.message);
     cleanup();
   });
 });
 
 server.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  console.log(`KS TV Relay Server running on http://localhost:${PORT}`);
 });
