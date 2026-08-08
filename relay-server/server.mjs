@@ -203,11 +203,9 @@ wss.on('connection', (ws, req) => {
         console.log(`🎬 [STUDIO LIVE] Streaming to ${rtmpUrl}/${maskedKey} (Active: ${activeStreams + 1})`);
 
         const ffmpegArgs = [
-          '-fflags', '+genpts+nobuffer+igndts',
           '-thread_queue_size', '1024',
           '-f', 'webm',
           '-i', 'pipe:0',
-          '-vf', 'fps=30,setpts=N/(30*TB)',
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
           '-tune', 'zerolatency',
@@ -219,7 +217,7 @@ wss.on('connection', (ws, req) => {
           '-b:v', '2500k',
           '-maxrate', '2500k',
           '-bufsize', '5000k',
-          '-af', 'asetpts=N/(44100*TB),aresample=44100:async=1000',
+          '-af', 'aresample=44100:async=1000',
           '-c:a', 'aac',
           '-b:a', '128k',
           '-ar', '44100',
