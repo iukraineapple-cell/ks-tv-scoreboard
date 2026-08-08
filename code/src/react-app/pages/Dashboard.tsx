@@ -314,6 +314,22 @@ export default function Dashboard() {
                       <span>Керувати матчем (Cockpit)</span>
                     </Link>
 
+                    <Link
+                      to={`/studio/${m.id}`}
+                      className="w-full py-3 rounded-xl text-white font-bold text-xs flex items-center justify-center space-x-2 shadow-lg transition-all active:scale-95"
+                      style={{
+                        background: m.is_broadcasting
+                          ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                          : 'linear-gradient(135deg, #10b981, #059669)',
+                        boxShadow: m.is_broadcasting
+                          ? '0 4px 20px rgba(239,68,68,0.3)'
+                          : '0 4px 20px rgba(16,185,129,0.3)',
+                      }}
+                    >
+                      <Radio className="h-4 w-4" />
+                      <span>{m.is_broadcasting ? '🔴 В ЕТЕРІ — Студія Live' : '📡 Студія Live (YouTube)'}</span>
+                    </Link>
+
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => copyToClipboard(scoreboardUrl, "табло OBS")}

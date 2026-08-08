@@ -13,6 +13,7 @@ const AdminLoginPage = React.lazy(() => import("@/react-app/pages/AdminLogin"));
 const ScoreboardPage = React.lazy(() => import("@/react-app/pages/Scoreboard"));
 const LineupsPage = React.lazy(() => import("@/react-app/pages/Lineups"));
 const EventsPage = React.lazy(() => import("@/react-app/pages/Events"));
+const BroadcastStudioPage = React.lazy(() => import("@/react-app/pages/BroadcastStudio"));
 
 function PageLoader() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/scoreboard" element={<ScoreboardPage />} />
             <Route path="/lineups" element={<LineupsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/studio/:id" element={<BroadcastStudioPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Suspense>

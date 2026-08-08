@@ -37,6 +37,11 @@ export interface MatchData {
   scoreboard_position?: string;
   timer_start_timestamp?: number;
   timer_server_time?: number;
+  youtube_stream_key?: string;
+  youtube_rtmp_url?: string;
+  is_broadcasting?: boolean;
+  broadcast_room_id?: string;
+  broadcast_started_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -599,4 +604,24 @@ export async function deletePayment(paymentId: number): Promise<boolean> {
 
   if (error) console.error("Error deleting payment:", error);
   return !error;
+}
+
+// Broadcast / Streaming
+export async function updateBroadcastStatus(
+  matchId: number,
+  params: {
+    is_broadcasting?: boolean;
+    broadcast_room_id?: string | null;
+    broadcast_started_at?: string | null;
+    youtube_stream_key?: string;
+    youtube_rtmp_url?: string;
+  }
+): Promise<void> {
+  const supabase = requireSupabase();
+  const { error } = await supabase
+    .from("matches")
+    .update(params)
+    .eq("id", matchId);
+
+  if (error) console.error("Error updating broadcast status:", error);
 }
