@@ -1,22 +1,25 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export default function AuthCallback() {
   const navigate = useNavigate();
+  const { user, isPending } = useAuth();
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
+    if (!isPending) {
+      if (user) {
         navigate("/dashboard");
-      } catch (error) {
-        console.error("Authentication error:", error);
-        navigate("/");
+      } else {
+        // Allow brief fallback timeout before redirecting home if auth failed
+        const timer = setTimeout(() => {
+          navigate("/");
+        }, 1500);
+        return () => clearTimeout(timer);
       }
-    };
-
-    handleCallback();
-  }, [navigate]);
+    }
+  }, [user, isPending, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">

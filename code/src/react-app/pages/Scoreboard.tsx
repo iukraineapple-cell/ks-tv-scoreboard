@@ -1,43 +1,27 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router";
-
-interface Match {
-  id: number;
-  team1_name: string;
-  team2_name: string;
-  team1_logo_url: string | null;
-  team2_logo_url: string | null;
-  team1_score: number;
-  team2_score: number;
-  timer_duration: number;
-  current_time: number;
-  is_timer_running: boolean;
-  current_half: number;
-  design_theme: string;
-  is_visible: boolean;
-  half_time_offset: number;
-}
+import { getMatchById, MatchData } from "@/lib/supabase-queries";
+import { supabase } from "@/lib/supabase";
 
 export default function Scoreboard() {
   const [searchParams] = useSearchParams();
-  const matchId = searchParams.get("match_id");
-  const [match, setMatch] = useState<Match | null>(null);
+  const matchId = searchParams.get("match") || searchParams.get("match_id");
+  const [match, setMatch] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMatch = useCallback(async () => {
+    if (!matchId) return;
     try {
-      const response = await fetch(`/api/matches/${matchId}`);
-      const data = await response.json();
-
-      if (data.success) {
-        setMatch(data.data);
+      const data = await getMatchById(matchId);
+      if (data) {
+        setMatch(data);
         setError(null);
       } else {
         setError("Match not found");
       }
-    } catch (error) {
-      console.error("Error fetching match:", error);
+    } catch (err) {
+      console.error("Error fetching match:", err);
       setError("Error loading scoreboard");
     } finally {
       setLoading(false);
@@ -52,8 +36,31 @@ export default function Scoreboard() {
     }
 
     fetchMatch();
-    const interval = setInterval(fetchMatch, 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchMatch, 2000);
+
+    // Supabase Realtime subscription for instant updates
+    let channel: any;
+    if (supabase) {
+      channel = supabase
+        .channel(`match_${matchId}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'matches', filter: `id=eq.${matchId}` },
+          (payload: any) => {
+            if (payload.new) {
+              setMatch(payload.new as MatchData);
+            }
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (supabase && channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [matchId, fetchMatch]);
 
   const formatTime = (seconds: number): string => {
@@ -64,36 +71,31 @@ export default function Scoreboard() {
       .padStart(2, "0")}`;
   };
 
-  const getDisplayTime = (match: Match): number => {
-    if (match.current_half === 2) {
-      return match.current_time + (match.half_time_offset || match.timer_duration);
+  const getDisplayTime = (m: MatchData): number => {
+    if (m.current_half === 2) {
+      return m.current_time + (m.half_time_offset || m.timer_duration);
     }
-    return match.current_time;
+    return m.current_time;
   };
 
-  const shortName = (name: string) => name.slice(0, 3).toUpperCase();
+  const shortName = (name: string) => (name ? name.slice(0, 3).toUpperCase() : "---");
 
-  if (loading) {
-    return <div className="min-h-screen bg-transparent"></div>;
-  }
-
-  if (error || !match || !match.is_visible) {
+  if (loading || error || !match || !match.is_visible) {
     return <div className="min-h-screen bg-transparent"></div>;
   }
 
   return (
     <div className="fixed inset-0 z-50 pointer-events-none flex justify-center">
-      {/* Табло */}
+      {/* Scoreboard Overlay */}
       <div className="absolute top-6 flex flex-col items-center">
-        {/* Main Box */}
-        <div className="flex items-center bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-md shadow-2xl border border-white/20 overflow-hidden">
+        <div className="flex items-center bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 rounded-md shadow-2xl border border-white/20 overflow-hidden">
           {/* Left Team */}
           <div className="flex items-center space-x-2 px-4 py-2 min-w-[120px] justify-end">
             {match.team1_logo_url ? (
               <img
                 src={match.team1_logo_url}
                 alt={match.team1_name}
-                className="w-8 h-8 object-cover"
+                className="w-8 h-8 object-cover rounded"
               />
             ) : (
               <div className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-full text-white text-xs font-bold">
@@ -106,11 +108,11 @@ export default function Scoreboard() {
           </div>
 
           {/* Score */}
-          <div className="flex items-center bg-black/70 px-6 py-2 mx-2 rounded-md shadow-inner">
+          <div className="flex items-center bg-black/80 px-6 py-2 mx-2 rounded-md shadow-inner">
             <span className="text-white font-extrabold text-2xl">
               {match.team1_score}
             </span>
-            <span className="text-gray-300 font-bold text-xl mx-2">-</span>
+            <span className="text-gray-400 font-bold text-xl mx-2">-</span>
             <span className="text-white font-extrabold text-2xl">
               {match.team2_score}
             </span>
@@ -125,7 +127,7 @@ export default function Scoreboard() {
               <img
                 src={match.team2_logo_url}
                 alt={match.team2_name}
-                className="w-8 h-8 object-cover"
+                className="w-8 h-8 object-cover rounded"
               />
             ) : (
               <div className="w-8 h-8 flex items-center justify-center bg-white/20 rounded-full text-white text-xs font-bold">
@@ -134,18 +136,9 @@ export default function Scoreboard() {
             )}
           </div>
 
-          {/* Timer & KS Logo */}
+          {/* Timer */}
           <div className="relative flex items-center bg-gray-900 px-4 py-2 ml-3 border-l border-white/20">
-            <img
-              src="https://ksliga.com/images/ks-logo.png"
-              alt="KS Logo"
-              className="w-0 h-0 mr-3"
-            />
-            <div
-              className={`text-white font-mono font-bold text-lg ${
-                match.is_timer_running ? "animate-pulse" : ""
-              }`}
-            >
+            <div className="text-white font-mono font-bold text-lg">
               {formatTime(getDisplayTime(match))}
             </div>
             <div className="ml-3 text-blue-400 font-bold text-sm">

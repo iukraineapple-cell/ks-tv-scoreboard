@@ -8,7 +8,7 @@ export default defineConfig({
     allowedHosts: true,
   },
   build: {
-    chunkSizeWarningLimit: 5000,
+    chunkSizeWarningLimit: 1500,
   },
   resolve: {
     alias: {

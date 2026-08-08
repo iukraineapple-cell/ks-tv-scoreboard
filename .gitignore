@@ -11,3 +11,4 @@ users.json
 public_asset_links.json
 
 .vercel
+.codex/
