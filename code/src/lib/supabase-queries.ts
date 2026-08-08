@@ -31,6 +31,10 @@ export interface MatchData {
   show_notification: boolean;
   current_notification_text: string | null;
   show_lineups: boolean;
+  team1_color?: string;
+  team2_color?: string;
+  scoreboard_style?: string;
+  scoreboard_position?: string;
   timer_start_timestamp?: number;
   timer_server_time?: number;
   created_at: string;
@@ -287,14 +291,14 @@ export async function updateMatchLineups(matchId: number, show_lineups: boolean)
   return !error;
 }
 
-export async function updateMatchSettings(matchId: number, settings: { design_theme?: string; timer_duration?: number }): Promise<boolean> {
+export async function updateMatchSettings(matchId: number, settings: Record<string, any>): Promise<boolean> {
   const supabase = requireSupabase();
   const { error } = await supabase
     .from("matches")
     .update({ ...settings, updated_at: new Date().toISOString() })
     .eq("id", matchId);
 
-  if (error) console.error("Error updating settings:", error);
+  if (error) console.error("Error updating match settings:", error);
   return !error;
 }
 

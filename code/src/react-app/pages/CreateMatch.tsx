@@ -1,7 +1,7 @@
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router";
-import { ArrowLeft, Trophy, Clock, Palette } from "lucide-react";
+import { ArrowLeft, Trophy, Clock, Sparkles, AlertCircle, Play, Shield } from "lucide-react";
 import { createMatch } from "@/lib/supabase-queries";
 
 export default function CreateMatch() {
@@ -13,7 +13,7 @@ export default function CreateMatch() {
   const [formData, setFormData] = useState({
     team1_name: "",
     team2_name: "",
-    timer_duration: 2700, // Default 45 mins (in seconds)
+    timer_duration: 2700, // Default 45 mins
     design_theme: "classic" as "classic" | "dark",
   });
 
@@ -26,7 +26,7 @@ export default function CreateMatch() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.team1_name.trim() || !formData.team2_name.trim()) {
-      setError("Введіть назви обох команд");
+      setError("Будь ласка, введіть назви обох команд");
       return;
     }
 
@@ -56,24 +56,24 @@ export default function CreateMatch() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
+      <div className="min-h-screen bg-[#06080F] flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-2 border-blue-500/20 border-t-blue-500 animate-spin"></div>
       </div>
     );
   }
 
   if (appUser && !appUser.is_payment_confirmed && !appUser.is_admin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center text-white px-6">
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 p-8 rounded-2xl max-w-md w-full text-center">
-          <Trophy className="h-16 w-16 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Оплатіть доступ</h2>
-          <p className="text-gray-300 mb-6">Створення табло доступне після підтвердження оплати.</p>
+      <div className="min-h-screen bg-[#06080F] text-white flex items-center justify-center px-6">
+        <div className="glass-panel border border-amber-500/30 p-8 rounded-3xl max-w-md w-full text-center space-y-4">
+          <Trophy className="h-12 w-12 text-amber-400 mx-auto" />
+          <h2 className="text-xl font-bold">Потрібна активація підписки</h2>
+          <p className="text-xs text-slate-300">Створення нових табло доступне після оплати доступу.</p>
           <Link
             to="/payment"
-            className="inline-block bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-black px-6 py-3 rounded-lg font-semibold transition-all"
+            className="inline-block w-full py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black text-xs sm:text-sm transition-all shadow-lg shadow-amber-500/20"
           >
-            Перейти до оплати
+            Оплатити доступ (500 ₴)
           </Link>
         </div>
       </div>
@@ -81,112 +81,100 @@ export default function CreateMatch() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 text-white py-12 px-6">
+    <div className="min-h-screen bg-[#07090E] text-slate-100 py-12 px-6 font-display">
       <div className="max-w-2xl mx-auto">
         <Link
           to="/dashboard"
-          className="inline-flex items-center space-x-2 text-gray-300 hover:text-white mb-8 transition-colors"
+          className="inline-flex items-center space-x-2 text-slate-400 hover:text-white mb-8 text-xs font-semibold transition-colors"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4" />
           <span>Повернутися до кабінету</span>
         </Link>
 
-        <div className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-8 shadow-2xl">
+        <div className="glass-panel rounded-3xl p-8 sm:p-10 border border-white/[0.08] shadow-2xl relative overflow-hidden">
           <div className="flex items-center space-x-3 mb-8">
-            <Trophy className="h-8 w-8 text-yellow-400" />
-            <h1 className="text-3xl font-bold">Створення табло</h1>
+            <div className="w-10 h-10 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <Trophy className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight">Створення нового матчу</h1>
+              <p className="text-xs text-slate-400">Заповніть назви команд і отримайте готове OBS табло</p>
+            </div>
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-6 text-sm">
-              {error}
+            <div className="mb-6 p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-xs flex items-center space-x-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
+            {/* Quick Match Presets */}
+            <div>
+              <label className="block text-xs font-bold text-slate-400 mb-2">Швидкі пресети формату гри</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, timer_duration: 2700 }))}
+                  className={`p-3 rounded-2xl border text-xs font-bold transition-all text-left ${
+                    formData.timer_duration === 2700
+                      ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow'
+                      : 'bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="text-white font-black">⚽ Великий футбол 11х11</div>
+                  <div className="text-[11px] text-slate-400 font-normal mt-0.5">2 тайми по 45 хвилин</div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, timer_duration: 1200 }))}
+                  className={`p-3 rounded-2xl border text-xs font-bold transition-all text-left ${
+                    formData.timer_duration === 1200
+                      ? 'bg-amber-600/20 border-amber-500 text-amber-300 shadow'
+                      : 'bg-white/[0.03] border-white/[0.06] text-slate-400 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="text-white font-black">⚡ Футзал / Міні-футбол</div>
+                  <div className="text-[11px] text-slate-400 font-normal mt-0.5">2 тайми по 20 хвилин</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Team Names */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">Команда 1 (Господарі)</label>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Команда 1 (Господарі)</label>
                 <input
                   type="text"
                   required
+                  placeholder="напр. Карпати Львів"
                   value={formData.team1_name}
-                  onChange={(e) => setFormData({ ...formData, team1_name: e.target.value })}
-                  placeholder="Наприклад: ФК Динамо"
-                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors"
+                  onChange={(e) => setFormData(prev => ({ ...prev, team1_name: e.target.value }))}
+                  className="glass-input rounded-2xl px-4 py-3 text-sm w-full outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-200 mb-2">Команда 2 (Гості)</label>
+                <label className="block text-xs font-bold text-slate-400 mb-1.5">Команда 2 (Гості)</label>
                 <input
                   type="text"
                   required
+                  placeholder="напр. Динамо Київ"
                   value={formData.team2_name}
-                  onChange={(e) => setFormData({ ...formData, team2_name: e.target.value })}
-                  placeholder="Наприклад: ФК Шахтар"
-                  className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:border-blue-400 transition-colors"
+                  onChange={(e) => setFormData(prev => ({ ...prev, team2_name: e.target.value }))}
+                  className="glass-input rounded-2xl px-4 py-3 text-sm w-full outline-none"
                 />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2 flex items-center space-x-2">
-                <Clock className="h-4 w-4 text-blue-400" />
-                <span>Тривалість тайму</span>
-              </label>
-              <select
-                value={formData.timer_duration}
-                onChange={(e) => setFormData({ ...formData, timer_duration: Number(e.target.value) })}
-                className="w-full bg-black/30 border border-white/20 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-400 transition-colors"
-              >
-                <option value={900} className="bg-slate-900">15 хвилин</option>
-                <option value={1800} className="bg-slate-900">30 хвилин</option>
-                <option value={2700} className="bg-slate-900">45 хвилин (Стандарт)</option>
-                <option value={3600} className="bg-slate-900">60 хвилин</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2 flex items-center space-x-2">
-                <Palette className="h-4 w-4 text-purple-400" />
-                <span>Тема оформлення</span>
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, design_theme: "classic" })}
-                  className={`p-4 rounded-xl border text-left transition-all ${
-                    formData.design_theme === "classic"
-                      ? "border-blue-400 bg-blue-500/20"
-                      : "border-white/10 bg-black/20 hover:bg-black/30"
-                  }`}
-                >
-                  <div className="font-semibold mb-1">Класична</div>
-                  <div className="text-xs text-gray-400">Світлий прямокутний оверлей</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, design_theme: "dark" })}
-                  className={`p-4 rounded-xl border text-left transition-all ${
-                    formData.design_theme === "dark"
-                      ? "border-purple-400 bg-purple-500/20"
-                      : "border-white/10 bg-black/20 hover:bg-black/30"
-                  }`}
-                >
-                  <div className="font-semibold mb-1">Темна</div>
-                  <div className="text-xs text-gray-400">Преміум темний оверлей</div>
-                </button>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 font-semibold py-4 rounded-xl shadow-lg transition-all transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm transition-all shadow-xl shadow-blue-500/25 disabled:opacity-50 active:scale-95"
             >
-              {loading ? "Створення..." : "Створити табло"}
+              {loading ? "Створення табло..." : "Створити табло та перейти в пульт"}
             </button>
           </form>
         </div>
