@@ -155,9 +155,16 @@ export class RTMPRelayClient {
 
       this.mediaRecorder = new MediaRecorder(config.stream, recorderOptions);
       
-      this.mediaRecorder.ondataavailable = (event) => {
+      this.mediaRecorder.ondataavailable = async (event) => {
         if (event.data && event.data.size > 0 && this.ws && this.ws.readyState === WebSocket.OPEN) {
-          this.ws.send(event.data);
+          try {
+            const buffer = await event.data.arrayBuffer();
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+              this.ws.send(buffer);
+            }
+          } catch (e) {
+            this.ws.send(event.data);
+          }
         }
       };
 
