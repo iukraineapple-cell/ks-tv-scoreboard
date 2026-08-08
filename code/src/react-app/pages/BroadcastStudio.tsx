@@ -717,7 +717,26 @@ export default function BroadcastStudio() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: colors.textSecondary, marginBottom: '6px' }}>Relay Server WebSocket URL</label>
-                  <input type="text" value={relayUrl} onChange={e => setRelayUrl(e.target.value)} style={inputStyle} placeholder="ws://localhost:3001" />
+                  <input type="text" value={relayUrl} onChange={e => setRelayUrl(e.target.value)} style={inputStyle} placeholder="ws://192.168.31.187:3001" />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <button 
+                      type="button"
+                      onClick={() => setRelayUrl('ws://192.168.31.187:3001')}
+                      style={{ ...buttonStyle, padding: '4px 8px', fontSize: '11px', background: 'rgba(255,255,255,0.08)' }}
+                    >
+                      📱 Застосувати IP ПК (192.168.31.187:3001)
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setRelayUrl('ws://localhost:3001')}
+                      style={{ ...buttonStyle, padding: '4px 8px', fontSize: '11px', background: 'rgba(255,255,255,0.08)' }}
+                    >
+                      💻 Localhost (для ПК)
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '11px', color: colors.textSecondary, marginTop: '6px' }}>
+                    💡 <b>Для смартфона:</b> телефон і ПК мають бути підключені до одного Wi-Fi роутера. Введіть <code>ws://192.168.31.187:3001</code> або натисніть кнопку вище.
+                  </div>
                 </div>
               </div>
             )}
