@@ -164,10 +164,13 @@ wss.on('connection', (ws, req) => {
       if (ffmpegProcess && isStreaming) {
         if (ffmpegProcess.stdin && ffmpegProcess.stdin.writable && !ffmpegProcess.stdin.destroyed) {
           try {
+            console.log(`📦 Received chunk size: ${message.length} bytes`);
             ffmpegProcess.stdin.write(message);
           } catch (writeErr) {
-            // ignore write error during stream teardown
+            console.error(`❌ Error writing to FFmpeg stdin:`, writeErr);
           }
+        } else {
+           console.log(`⚠️ Ignored chunk of ${message.length} bytes - FFmpeg stdin not writable`);
         }
       }
       return;
@@ -253,9 +256,8 @@ wss.on('connection', (ws, req) => {
 
         ffmpegProcess.stderr.on('data', (data) => {
           const str = data.toString();
-          if (str.toLowerCase().includes('error') || str.toLowerCase().includes('failed') || str.toLowerCase().includes('aborted')) {
-            console.log(`[FFmpeg Info]: ${str.trim()}`);
-          }
+          // Print all FFmpeg output to debug why it stops
+          process.stdout.write(`[FFmpeg]: ${str}`);
         });
 
       } else if (data.type === 'stop') {

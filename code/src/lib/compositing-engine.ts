@@ -113,10 +113,17 @@ export class CompositingEngine {
     return new MediaStream(tracks);
   }
 
+  private intervalId: number | null = null;
+
   public start() {
     if (!this.isRunning) {
       this.isRunning = true;
       this.renderLoop();
+      
+      // Fallback for background tab: force render every 100ms (10 fps) if rAF is suspended
+      this.intervalId = window.setInterval(() => {
+        if (this.isRunning) this.render();
+      }, 100);
     }
   }
 
@@ -125,6 +132,10 @@ export class CompositingEngine {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+    if (this.intervalId !== null) {
+      window.clearInterval(this.intervalId);
+      this.intervalId = null;
     }
   }
 

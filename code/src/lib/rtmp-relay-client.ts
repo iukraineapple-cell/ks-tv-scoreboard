@@ -149,7 +149,7 @@ export class RTMPRelayClient {
 
       const recorderOptions: MediaRecorderOptions = {
         mimeType: selectedMime,
-        videoBitsPerSecond: 2500000, // 2.5 Mbps 720p HD
+        videoBitsPerSecond: 2000000, // 2.0 Mbps 720p HD (optimized for mobile)
         audioBitsPerSecond: 128000   // 128 kbps AAC/Opus
       };
 
@@ -237,8 +237,8 @@ export class RTMPRelayClient {
 
   private getSupportedMimeType(): string | null {
     const types = [
-      'video/webm;codecs=h264,opus',
       'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=h264,opus',
       'video/webm;codecs=vp9,opus',
       'video/webm'
     ];

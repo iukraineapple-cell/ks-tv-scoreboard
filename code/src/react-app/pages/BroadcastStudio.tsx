@@ -238,6 +238,17 @@ export default function BroadcastStudio() {
     };
   }, [initCamera]);
 
+  // Tab Visibility Warning
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && relayClientRef.current?.isStreaming) {
+        alert("⚠️ УВАГА! Якщо ви згорнули браузер або переключили вкладку, трансляція може обірватися! iOS та Android блокують доступ до камери у фоновому режимі.");
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
   // Update Engine with Match Data
   useEffect(() => {
     if (engineRef.current) {
