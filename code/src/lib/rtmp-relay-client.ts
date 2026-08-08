@@ -142,12 +142,18 @@ export class RTMPRelayClient {
       }));
 
       // 2. Setup MediaRecorder
-      const options = this.getSupportedMimeType();
-      if (!options) {
+      const selectedMime = this.getSupportedMimeType();
+      if (!selectedMime) {
         throw new Error('No supported video mime type found for MediaRecorder');
       }
 
-      this.mediaRecorder = new MediaRecorder(config.stream, { mimeType: options });
+      const recorderOptions: MediaRecorderOptions = {
+        mimeType: selectedMime,
+        videoBitsPerSecond: 2500000, // 2.5 Mbps 720p HD
+        audioBitsPerSecond: 128000   // 128 kbps AAC/Opus
+      };
+
+      this.mediaRecorder = new MediaRecorder(config.stream, recorderOptions);
       
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0 && this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -162,7 +168,8 @@ export class RTMPRelayClient {
         this.stopStreaming();
       };
 
-      this.mediaRecorder.start(1000); // 1000ms timeslice
+      // 250ms timeslice ensures steady, continuous stream of WebM clusters to FFmpeg
+      this.mediaRecorder.start(250);
       this.setStatus('streaming');
       
     } catch (error: any) {

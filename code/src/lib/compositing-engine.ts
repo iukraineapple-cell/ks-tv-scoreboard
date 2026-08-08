@@ -84,8 +84,30 @@ export class CompositingEngine {
     const canvasStream = this.getOutputStream();
     const tracks = [...canvasStream.getVideoTracks()];
     
-    if (this.audioStream) {
-      tracks.push(...this.audioStream.getAudioTracks());
+    const audioTracks = this.audioStream ? this.audioStream.getAudioTracks() : [];
+    if (audioTracks.length > 0) {
+      tracks.push(...audioTracks);
+    } else {
+      // Create a guaranteed silent audio track so YouTube RTMP never terminates
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          const audioCtx = new AudioContextClass();
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.0001; // minimal audible level to keep WebAudio engine actively producing samples
+          osc.connect(gain);
+          const dest = audioCtx.createMediaStreamDestination();
+          gain.connect(dest);
+          osc.start();
+          const silentTrack = dest.stream.getAudioTracks()[0];
+          if (silentTrack) {
+            tracks.push(silentTrack);
+          }
+        }
+      } catch (e) {
+        console.warn('Silent audio generator error:', e);
+      }
     }
     
     return new MediaStream(tracks);

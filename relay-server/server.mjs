@@ -196,18 +196,24 @@ wss.on('connection', (ws, req) => {
         console.log(`🎬 [STUDIO LIVE] Streaming to ${rtmpUrl}/${maskedKey} (Active: ${activeStreams + 1})`);
 
         const ffmpegArgs = [
-          '-re',
+          '-f', 'webm',
           '-i', 'pipe:0',
           '-c:v', 'libx264',
           '-preset', 'ultrafast',
           '-tune', 'zerolatency',
-          '-maxrate', '3000k',
-          '-bufsize', '6000k',
           '-pix_fmt', 'yuv420p',
+          '-r', '30',
           '-g', '60',
+          '-keyint_min', '30',
+          '-sc_threshold', '0',
+          '-b:v', '2500k',
+          '-maxrate', '2500k',
+          '-bufsize', '5000k',
           '-c:a', 'aac',
-          '-ar', '44100',
           '-b:a', '128k',
+          '-ar', '44100',
+          '-ac', '2',
+          '-flvflags', 'no_duration_filesize',
           '-f', 'flv',
           fullUrl
         ];
